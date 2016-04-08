@@ -16,7 +16,9 @@ import io.swagger.validator.models.ValidationResponse;
 import io.swagger.validator.models.SchemaValidationError;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHost;
 import org.apache.http.StatusLine;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
@@ -35,6 +37,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -53,13 +56,20 @@ public class ValidatorService {
     static ObjectMapper YamlMapper = Yaml.mapper();
     private JsonSchema schema;
 
+    static {
+    	System.setProperty("http.proxyHost", "www-proxy.us.oracle.com");
+    	System.setProperty("http.proxyPort", "80");
+    	System.setProperty("https.proxyHost", "www-proxy.us.oracle.com");
+    	System.setProperty("https.proxyPort", "80");
+    	System.setProperty("http.nonProxyHosts", "*.oracle.com|*.oraclecorp.com");
+    }
     public void validateByUrl(HttpServletRequest request, HttpServletResponse response, String url) {
         LOGGER.info("validationUrl: " + url + ", forClient: " + getRemoteAddr(request));
 
         ValidationResponse payload = null;
 
         try {
-            payload = debugByUrl(request, response, url);
+            payload = debugByUrl(url);
         }
         catch (Exception e) {
             error(response);
@@ -71,19 +81,6 @@ public class ValidatorService {
         }
         if(payload.getMessages() == null && payload.getSchemaValidationMessages() == null) {
             success(response);
-        }
-        // some values may be unsupported, and that shouldn't invalidate the spec
-
-        if(payload.getMessages() != null && payload.getMessages().size() > 0) {
-            boolean valid = true;
-            for(String message : payload.getMessages()) {
-                if(!message.endsWith("is unsupported")) {
-                    valid = false;
-                }
-            }
-            if(valid) {
-                success(response);
-            }
         }
 
         if(payload.getSchemaValidationMessages() != null) {
@@ -114,6 +111,10 @@ public class ValidatorService {
     }
 
     public ValidationResponse debugByUrl(HttpServletRequest request, HttpServletResponse response, String url) throws Exception {
+    	return debugByUrl(url);
+    }
+    
+    public ValidationResponse debugByUrl(String url) throws Exception {
         ValidationResponse output = new ValidationResponse();
         String content;
 
@@ -237,23 +238,23 @@ public class ValidatorService {
         return output;
     }
 
-    private void success(HttpServletResponse response) {
+    protected void success(HttpServletResponse response) {
         writeToResponse(response, "valid.png");
     }
 
-    private void error(HttpServletResponse response) {
+    protected void error(HttpServletResponse response) {
         writeToResponse(response, "error.png");
     }
 
-    private void fail(HttpServletResponse response) {
+    protected void fail(HttpServletResponse response) {
         writeToResponse(response, "invalid.png");
     }
 
-    private void upgrade(HttpServletResponse response) {
+    protected void upgrade(HttpServletResponse response) {
         writeToResponse(response, "upgrade.png");
     }
 
-    private void writeToResponse(HttpServletResponse response, String name) {
+    protected void writeToResponse(HttpServletResponse response, String name) {
         try {
             InputStream is = this.getClass().getClassLoader().getResourceAsStream(name);
             if (is != null) {
@@ -264,7 +265,7 @@ public class ValidatorService {
         }
     }
 
-    private String getSchema() throws Exception {
+    protected String getSchema() throws Exception {
         if (CACHED_SCHEMA != null && (System.currentTimeMillis() - LAST_FETCH) < 600000) {
             return CACHED_SCHEMA;
         }
@@ -313,7 +314,7 @@ public class ValidatorService {
         return httpClient;
     }
 
-    private String getUrlContents(String urlString) throws IOException {
+    protected String getUrlContents(String urlString) throws IOException {
         LOGGER.trace("fetching URL contents");
         // System.setProperty("jsse.enableSNIExtension", "false");
         // System.setProperty("javax.net.debug", "all");
@@ -321,6 +322,17 @@ public class ValidatorService {
         HttpGet getMethod = new HttpGet(urlString);
         getMethod.setHeader("Accept", "application/json, */*");
 
+        URL url = new URL(urlString);
+        String host = url.getHost();
+        if (!host.endsWith("oracle.com") && 
+        	!host.endsWith("oraclecorp.com")) {
+        	HttpHost proxy = new HttpHost("www-proxy.us.oracle.com", 80, "http");
+        	RequestConfig config = RequestConfig.custom()
+        			.setProxy(proxy)
+        			.build();
+        	getMethod.setConfig(config);
+        }
+        
         final CloseableHttpClient httpClient = getCarelessHttpClient();
 
         if (httpClient != null) {
@@ -351,12 +363,12 @@ public class ValidatorService {
         return ipAddress;
     }
 
-    private SwaggerDeserializationResult readSwagger(String content) throws IllegalArgumentException {
+    protected SwaggerDeserializationResult readSwagger(String content) throws IllegalArgumentException {
         SwaggerParser parser = new SwaggerParser();
         return parser.readWithInfo(content);
     }
 
-    private JsonNode readNode(String text) {
+    protected JsonNode readNode(String text) {
         try {
             if (text.trim().startsWith("{")) {
                 return JsonMapper.readTree(text);

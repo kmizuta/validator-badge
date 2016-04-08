@@ -5,6 +5,7 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponses;
 import io.swagger.validator.models.ValidationResponse;
+import io.swagger.validator.services.OraValidatorService;
 import io.swagger.validator.services.ValidatorService;
 
 import javax.servlet.http.HttpServletRequest;
@@ -16,7 +17,7 @@ import javax.ws.rs.core.Response;
 @Path("/")
 @Api(value = "/validator", description = "Validator for Swagger Specs")
 public class ValidatorResource {
-    ValidatorService service = new ValidatorService();
+    OraValidatorService service = new OraValidatorService();
 
     @GET
     @ApiOperation(value = "Validates a spec based on a URL")
@@ -71,4 +72,46 @@ public class ValidatorResource {
             return Response.status(500).build();
         }
     }
+    
+    @GET
+    @Path("/ora")
+    @ApiOperation(value = "Validates a spec based on an API")
+    @ApiResponses(value = {})
+    @Produces({"image/png"})
+    public Response validateByApi(
+            @Context HttpServletRequest request,
+            @Context HttpServletResponse response,
+            @ApiParam(value = "product to validate") @QueryParam("product") String product,
+            @ApiParam(value = "level to validate") @QueryParam("level") String level,
+            @ApiParam(value = "api to validate") @QueryParam("api") String api) throws WebApplicationException {
+        try {
+            service.validateByApi(request, response, product, api, level);
+            response.addHeader("Cache-Control", "no-cache");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return Response.ok().build();
+    }
+    
+    @GET
+    @Path("/oradebug")
+    @Produces({"application/json"})
+    @ApiOperation(value = "Validates a spec based on an API",
+            response = ValidationResponse.class,
+            responseContainer = "List")
+    @ApiResponses(value = {})
+    public Response debugByApi(
+            @Context HttpServletRequest request,
+            @Context HttpServletResponse response,
+            @ApiParam(value = "product to validate") @QueryParam("product") String product,
+            @ApiParam(value = "level to validate") @QueryParam("level") String level,
+            @ApiParam(value = "api to validate") @QueryParam("api") String api) throws WebApplicationException {
+        try {
+            return Response.ok().entity(service.debugByApi(product, api, level)).build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Response.status(500).build();
+        }
+    }
+
 }
