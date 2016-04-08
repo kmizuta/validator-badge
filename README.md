@@ -43,9 +43,9 @@ http://localhost:8002/?url=http://petstore.swagger.io/v2/swagger.json
 
 # Oracle Specific Changes
 
-* [https://github.com/kmizuta/validator-badge/blob/master/src/main/java/io/swagger/validator/services/ValidatorService.java](ValidatorService) - Modifications to support going through www-proxy.us.oracle.com
-* [https://github.com/kmizuta/validator-badge/blob/master/src/main/java/io/swagger/validator/resources/ValidatorResource.java](ValidatorResource) - Added endpoints /ora and /oradebug. 
-* [https://github.com/kmizuta/validator-badge/blob/master/src/main/java/io/swagger/validator/services/OraValidatorService.java](OraValidatorService) - Integration layer with REST API Publishing App. Provides the implementation for /ora and /oradebug so that it validates the whole API (which might consist of multiple swagger feeds). 
+* [ValidatorService](https://github.com/kmizuta/validator-badge/blob/master/src/main/java/io/swagger/validator/services/ValidatorService.java) - Modifications to support going through www-proxy.us.oracle.com
+* [ValidatorResource](https://github.com/kmizuta/validator-badge/blob/master/src/main/java/io/swagger/validator/resources/ValidatorResource.java) - Added endpoints /ora and /oradebug. 
+* [OraValidatorService](https://github.com/kmizuta/validator-badge/blob/master/src/main/java/io/swagger/validator/services/OraValidatorService.java) - Integration layer with REST API Publishing App. Provides the implementation for /ora and /oradebug so that it validates the whole API (which might consist of multiple swagger feeds). 
 
 For validating an API in REST API Publishing App, access the validator like such:
 
