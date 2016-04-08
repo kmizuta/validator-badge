@@ -44,6 +44,22 @@ http://localhost:8002/?url=http://petstore.swagger.io/v2/swagger.json
 
 # Oracle Specific Changes
 
+* ValidatorService - Modifications to support going through www-proxy.us.oracle.com
+* ValidatorResource - Added endpoints /ora and /oradebug. 
+* OraValidatorService - Integration layer with REST API Publishing App. Provides the implementation for /ora and /oradebug so that it validates the whole API (which might consist of multiple swagger feeds). 
+
+For validating an API in REST API Publishing App, access the validator like such:
+
+```
+http://localhost:8002/ora?product={product}&level={level}&api={api}
+```
+
+or
+
+```
+http://localhost:8002/ora?product=fusionapps&level=release&api=sales-r10
+```
+
 ---
 <img src="http://swagger.io/wp-content/uploads/2016/02/logo.jpg"/>
 
